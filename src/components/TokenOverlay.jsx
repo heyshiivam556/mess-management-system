@@ -53,15 +53,6 @@ function useLiveClock() {
   return time;
 }
 
-function useLiveClock() {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return time;
-}
-
 export default function TokenOverlay({ onClose }) {
   const { user } = useAuth();
   const time     = useLiveClock();
