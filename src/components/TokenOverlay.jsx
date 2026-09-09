@@ -37,7 +37,7 @@ const MEAL_WINDOWS = [
   Must match DEV_HOUR in src/pages/worker/Terminal.jsx!
   Remember to set back to null before going live!
 ───────────────────────────────────────────────────────── */
-const DEV_HOUR = null; // ← live mode (testing ke liye number set karo, dono files me same)
+const DEV_HOUR = null; // ← live mode
 
 function getActiveMeal() {
   const h = DEV_HOUR ?? new Date().getHours();
@@ -59,15 +59,14 @@ export default function TokenOverlay({ onClose }) {
   const [optedOut, setOptedOut] = useState(null);
   const [meal, setMeal] = useState(getActiveMeal);
 
-  // Re-check meal window every minute (in case it opens/closes while token is shown)
+  // Re-check meal window every minute
   useEffect(() => {
-    if (DEV_HOUR !== null) return; // skip polling in dev override mode
+    if (DEV_HOUR !== null) return;
     const id = setInterval(() => setMeal(getActiveMeal()), 60_000);
     return () => clearInterval(id);
   }, []);
 
   const dateStr = format(time, 'yyyy-MM-dd');
-  const timeStr = format(time, 'h:mm:ss aa');
   const dayStr  = format(time, 'EEE, dd MMM yyyy');
 
   useEffect(() => {
@@ -76,7 +75,7 @@ export default function TokenOverlay({ onClose }) {
     return () => unsub?.();
   }, [user?.uid, dateStr]);
 
-  // QR payload — changes per meal per day per student (opted-out ho to QR nahi)
+  // QR payload — opted-out ho to QR nahi
   const qrPayload = meal && !optedOut
     ? `GECMESS|${user?.uid}|${dateStr}|${meal.key}`
     : null;
@@ -91,73 +90,73 @@ export default function TokenOverlay({ onClose }) {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.82, opacity: 0, y: 48 }}
         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-        className="relative w-full max-w-[320px] rounded-[24px] border-2 border-brand-dark shadow-brutal-lg flex flex-col overflow-hidden bg-white"
+        className="relative w-full max-w-[300px] rounded-[20px] border-2 border-brand-dark shadow-brutal-lg flex flex-col overflow-hidden bg-white"
         style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
         onContextMenu={e => e.preventDefault()}
       >
         {/* ── Header strip (meal-coloured) ── */}
         <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ background: meal ? meal.color : '#f3f4f6', borderBottom: `2px solid ${meal ? meal.border : '#d1d5db'}` }}
+          className="px-5 py-3 flex items-center justify-between"
+          style={{
+            background: meal ? meal.color : '#f3f4f6',
+            borderBottom: `2px solid ${meal ? meal.border : '#d1d5db'}`,
+          }}
         >
           <div>
-            <p className="font-sans font-bold text-xs uppercase tracking-widest text-brand-dark/60">
-              {meal ? `${meal.emoji} ${meal.label} Pass` : '⏳ Between Meals'}
+            <p className="font-sans font-bold text-sm text-brand-dark">
+              {meal ? `${meal.emoji} ${meal.label} Pass` : '⏳ No Active Meal'}
             </p>
-            <p className="font-mono font-bold text-2xl text-brand-dark leading-none mt-0.5">{timeStr}</p>
             <p className="font-sans text-[10px] text-brand-dark/50 mt-0.5">{dayStr}</p>
           </div>
-          <div className="text-right">
-            <p className="font-sans text-[10px] text-brand-dark/40 uppercase tracking-wider">GEC Mess</p>
-            {meal && (
-              <p className="font-sans text-[10px] text-brand-dark/50">
-                Valid {meal.start}:00 – {meal.end}:00
-              </p>
-            )}
-          </div>
+          {meal && (
+            <span className="font-sans text-[10px] font-semibold text-brand-dark/60 bg-white/60 px-2 py-1 rounded-full border border-brand-dark/20">
+              {meal.start}:00–{meal.end}:00
+            </span>
+          )}
         </div>
 
-        {/* ── QR Code area ── */}
-        <div className="flex flex-col items-center px-5 py-5">
+        {/* ── QR / State area ── */}
+        <div className="flex flex-col items-center px-5 pt-5 pb-4">
           {optedOut ? (
-            <div className="w-full rounded-brutal border-2 border-brand-dark p-4 bg-brand-secondary shadow-brutal-sm mb-3 text-center">
-              <p className="text-3xl mb-1">⛔</p>
+            <div className="w-full rounded-brutal border-2 border-brand-dark p-5 bg-brand-secondary shadow-brutal-sm mb-4 text-center">
+              <p className="text-4xl mb-2">⛔</p>
               <p className="font-sans font-bold text-sm text-brand-dark">You are opted out</p>
-              <p className="font-sans text-xs text-brand-dark/70 mt-1">
-                {optedOut.startDate} → {getOptOutEndDate(optedOut.startDate, optedOut.numDays)} · Gate par entry deny hogi.
+              <p className="font-sans text-xs text-brand-dark/70 mt-1.5">
+                {optedOut.startDate} → {getOptOutEndDate(optedOut.startDate, optedOut.numDays)}<br />
+                Gate entry will be denied during this period.
               </p>
             </div>
           ) : qrPayload ? (
             <>
-              <div className="rounded-brutal border-2 border-brand-dark p-3 bg-white shadow-brutal-sm mb-3">
+              <div className="rounded-brutal border-2 border-brand-dark p-3 bg-white shadow-brutal-sm">
                 <QRCodeSVG
                   value={qrPayload}
-                  size={200}
+                  size={210}
                   level="M"
                   includeMargin={false}
                   fgColor="#1a1209"
                 />
               </div>
               <motion.p
-                animate={{ opacity: [0.5, 1, 0.5] }}
+                animate={{ opacity: [0.4, 1, 0.4] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="font-sans text-[10px] text-brand-dark/40 mb-1"
+                className="font-sans text-[10px] text-brand-dark/40 mt-2 mb-1"
               >
                 Show this to the mess worker
               </motion.p>
             </>
           ) : (
-            <div className="w-[200px] h-[200px] rounded-brutal border-2 border-brand-dark/20 bg-brand-bg flex flex-col items-center justify-center gap-2 mb-3">
-              <span className="text-4xl">⏳</span>
+            <div className="w-[210px] h-[210px] rounded-brutal border-2 border-brand-dark/20 bg-brand-bg flex flex-col items-center justify-center gap-2">
+              <span className="text-5xl">⏳</span>
               <p className="font-sans text-xs text-brand-dark/50 text-center px-4">
                 No active meal right now.<br />QR will appear during meal windows.
               </p>
             </div>
           )}
 
-          {/* Name + roll strip */}
-          <div className="w-full border-2 border-brand-dark rounded-brutal px-4 py-3 text-center bg-brand-bg shadow-brutal-sm">
-            <p className="font-sans font-bold text-lg text-brand-dark leading-tight">
+          {/* ── Gap + Name & Roll ── */}
+          <div className="w-full mt-4 border-2 border-brand-dark rounded-brutal px-4 py-3 text-center bg-brand-bg shadow-brutal-sm">
+            <p className="font-sans font-bold text-base text-brand-dark leading-tight">
               {user?.displayName ?? 'Student'}
             </p>
             <p className="font-mono text-sm text-brand-light mt-0.5">
@@ -165,27 +164,18 @@ export default function TokenOverlay({ onClose }) {
             </p>
           </div>
         </div>
-
-        {/* ── Perforated divider ── */}
-        <div className="w-full border-t-2 border-dashed border-brand-dark/15" />
-
-        {/* ── Footer ── */}
-        <div className="px-5 py-3 flex items-center justify-between">
-          <p className="font-sans text-[9px] text-brand-dark/30 uppercase tracking-widest">GEC Sheikhpura Mess</p>
-          <p className="font-mono text-[9px] text-brand-dark/30">{dateStr}</p>
-        </div>
       </motion.div>
 
-      {/* Close */}
+      {/* Close button */}
       <motion.button
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.18 }}
         onClick={onClose}
-        className="mt-6 w-[52px] h-[52px] rounded-full bg-brand-bg border-2 border-brand-dark shadow-brutal flex items-center justify-center"
+        className="mt-5 w-[50px] h-[50px] rounded-full bg-brand-bg border-2 border-brand-dark shadow-brutal flex items-center justify-center"
         aria-label="Close token"
       >
-        <X size={22} className="text-brand-dark" />
+        <X size={20} className="text-brand-dark" />
       </motion.button>
     </div>
   );

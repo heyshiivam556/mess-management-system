@@ -22,6 +22,7 @@ const StudentRoutine = lazy(() => import('./pages/student/Routine'));
 const StudentOptOut  = lazy(() => import('./pages/student/OptOut'));
 const StudentProfile = lazy(() => import('./pages/student/Profile'));
 const StudentFeedback = lazy(() => import('./pages/student/Feedback'));
+const StudentWallet  = lazy(() => import('./pages/student/WalletHistory'));
 
 // Committee
 const CommitteeDashboard = lazy(() => import('./pages/committee/Dashboard'));
@@ -89,6 +90,7 @@ function StudentLayout() {
               <Route path="opt-out"  element={<StudentOptOut   direction={direction} />} />
               <Route path="feedback" element={<StudentFeedback direction={direction} />} />
               <Route path="profile"  element={<StudentProfile  direction={direction} />} />
+              <Route path="wallet"   element={<StudentWallet   direction={direction} />} />
               <Route index element={<Navigate to="routine" replace />} />
             </Routes>
           </Suspense>

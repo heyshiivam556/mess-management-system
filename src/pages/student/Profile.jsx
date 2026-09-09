@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, Wallet, Clock, CheckCircle2, XCircle, ArrowLeftRight, FileText, Eye, X } from 'lucide-react';
+import { LogOut, Wallet, ChevronRight, ArrowLeftRight, Clock, CheckCircle2, XCircle, FileText, Eye, X } from 'lucide-react';
 import AnimatedPage from '../../components/AnimatedPage';
 import { BrutalCard, BrutalButton, BrutalBadge } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { listenMyOptOuts, listenMyPenalties, getOptOutEndDate } from '../../lib/firestoreService';
-import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate } from 'react-router-dom';
 
 /* ─────────────────────────────────────────────────────────
-   Student — Profile (Phase 2: live wallet + opt-out history)
-   Committee/Admin members also see a panel-switch button.
+   Student — Profile
+   • Single wallet card → taps to Wallet History page
+   • Opt-out history list
+   • No QR (QR is in the Token Overlay only)
 ───────────────────────────────────────────────────────── */
 
 const STATUS_CONF = {
-  pending:  { label: 'Pending',  color: 'bg-brand-purple',    Icon: Clock        },
-  approved: { label: 'Approved', color: 'bg-brand-accent',    Icon: CheckCircle2 },
-  rejected: { label: 'Rejected', color: 'bg-brand-secondary', Icon: XCircle      },
-  cancelled: { label: 'Cancelled', color: 'bg-brand-bg',      Icon: XCircle      },
+  pending:   { label: 'Pending',   color: 'bg-brand-purple',    Icon: Clock         },
+  approved:  { label: 'Approved',  color: 'bg-brand-accent',    Icon: CheckCircle2  },
+  rejected:  { label: 'Rejected',  color: 'bg-brand-secondary', Icon: XCircle       },
+  cancelled: { label: 'Cancelled', color: 'bg-brand-bg',        Icon: XCircle       },
 };
 
 function DocViewModal({ base64, name, onClose }) {
@@ -50,11 +51,10 @@ function DocViewModal({ base64, name, onClose }) {
 export default function Profile({ direction }) {
   const { user, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
-  const [penalties, setPenalties] = useState([]);
-  const [docView, setDocView] = useState(null);
+  const [history,   setHistory]   = useState([]);
+  const [docView,   setDocView]   = useState(null);
 
-  const isStaff    = user?.role === 'committee'; // admin accounts are separate — no switch needed
+  const isStaff    = user?.role === 'committee';
   const panelPath  = '/committee';
   const panelLabel = 'Committee Panel';
 
@@ -67,21 +67,6 @@ export default function Profile({ direction }) {
     return () => unsub?.();
   }, [user?.uid]);
 
-  useEffect(() => {
-    if (!user?.uid) return;
-    const unsub = listenMyPenalties(user.uid, setPenalties);
-    return () => unsub?.();
-  }, [user?.uid]);
-
-  const approved = history.filter(r => r.status === 'approved');
-  const pending = history.filter(r => r.status === 'pending');
-  const totalSaved = approved.reduce((sum, r) => sum + (r.estimatedRefund || 0), 0);
-  const pendingTotal = pending.reduce((sum, r) => sum + (r.estimatedRefund || 0), 0);
-  const monthPrefix = new Date().toISOString().slice(0, 7); // yyyy-MM
-  const monthSaved = approved
-    .filter(r => (r.startDate || '').startsWith(monthPrefix))
-    .reduce((sum, r) => sum + (r.estimatedRefund || 0), 0);
-
   return (
     <AnimatedPage direction={direction} className="px-5 pt-5 pb-6">
 
@@ -91,8 +76,7 @@ export default function Profile({ direction }) {
         animate={{ opacity: 1, y: 0 }}
         className="bg-brand-primary border-2 border-brand-dark rounded-brutal p-5 shadow-brutal mb-4 relative overflow-hidden"
       >
-        <span className="absolute -bottom-4 -right-4 font-serif font-bold text-brand-dark/10 select-none pointer-events-none"
-          style={{ fontSize: '5rem' }}>🎓</span>
+        <span className="absolute -bottom-4 -right-4 font-serif font-bold text-brand-dark/10 select-none pointer-events-none" style={{ fontSize: '5rem' }}>🎓</span>
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-16 h-16 rounded-full bg-white border-2 border-brand-dark flex items-center justify-center font-serif font-bold text-3xl shadow-brutal-sm shrink-0">
             {user?.displayName?.[0] ?? 'S'}
@@ -114,7 +98,7 @@ export default function Profile({ direction }) {
           animate={{ opacity: 1, y: 0 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => { window.location.href = panelPath; }}
-          className="w-full mb-5 flex items-center justify-between gap-3 bg-brand-dark text-brand-bg border-2 border-brand-dark rounded-brutal px-5 py-3.5 shadow-brutal-sm hover:shadow-brutal transition-shadow"
+          className="w-full mb-4 flex items-center justify-between gap-3 bg-brand-dark text-brand-bg border-2 border-brand-dark rounded-brutal px-5 py-3.5 shadow-brutal-sm hover:shadow-brutal transition-shadow"
         >
           <div className="flex items-center gap-3">
             <ArrowLeftRight size={18} className="shrink-0" />
@@ -129,48 +113,31 @@ export default function Profile({ direction }) {
         </motion.button>
       )}
 
-      {/* Wallet + Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <BrutalCard color="bg-brand-gold" className="p-4 text-center">
-          <Wallet size={20} className="mx-auto mb-1 text-brand-dark" />
-          <p className="font-sans text-xs text-brand-dark/60 uppercase tracking-wider mb-1">Wallet</p>
-          <p className="font-serif font-bold text-2xl text-brand-dark">₹{user?.walletBalance ?? 0}</p>
-        </BrutalCard>
-        <BrutalCard color="bg-brand-accent" className="p-4 text-center">
-          <CheckCircle2 size={20} className="mx-auto mb-1 text-brand-dark" />
-          <p className="font-sans text-xs text-brand-dark/60 uppercase tracking-wider mb-1">Total Saved</p>
-          <p className="font-serif font-bold text-2xl text-brand-dark">₹{totalSaved}</p>
-        </BrutalCard>
-      </div>
-
-      {/* Refund split chips */}
-      <div className="grid grid-cols-3 gap-2 mb-5">
-        <BrutalCard className="p-3 text-center">
-          <p className="font-sans text-[10px] text-brand-light uppercase tracking-wider">Pending</p>
-          <p className="font-serif font-bold text-lg text-brand-dark">₹{pendingTotal}</p>
-        </BrutalCard>
-        <BrutalCard className="p-3 text-center">
-          <p className="font-sans text-[10px] text-brand-light uppercase tracking-wider">Credited</p>
-          <p className="font-serif font-bold text-lg text-brand-gold">₹{totalSaved}</p>
-        </BrutalCard>
-        <BrutalCard className="p-3 text-center">
-          <p className="font-sans text-[10px] text-brand-light uppercase tracking-wider">This month</p>
-          <p className="font-serif font-bold text-lg text-brand-dark">₹{monthSaved}</p>
-        </BrutalCard>
-      </div>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
+      {/* Wallet — single card, tap to open history */}
+      <motion.button
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white border-2 border-brand-dark rounded-brutal p-6 flex flex-col items-center gap-3 shadow-brutal mb-6"
+        transition={{ delay: 0.05 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => navigate('/student/wallet')}
+        className="w-full mb-5 text-left"
       >
-        <p className="font-sans font-bold text-xs uppercase tracking-wider text-brand-dark">
-          GEC Sheikhpura — Entry QR
-        </p>
-        <QRCodeSVG value={user?.uid ?? 'unknown'} size={160} level="H" />
-        <p className="font-sans text-[10px] text-brand-light text-center max-w-[160px] mt-1">
-          Show this at the mess gate when asked
-        </p>
-      </motion.div>
+        <BrutalCard color="bg-brand-gold" className="p-4 flex items-center justify-between gap-3 hover:shadow-brutal transition-shadow cursor-pointer">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-brutal bg-brand-dark/10 border-2 border-brand-dark/20 flex items-center justify-center shrink-0">
+              <Wallet size={18} className="text-brand-dark" />
+            </div>
+            <div>
+              <p className="font-sans text-xs text-brand-dark/60 uppercase tracking-wider leading-none mb-0.5">Mess Wallet</p>
+              <p className="font-serif font-bold text-2xl text-brand-dark leading-none">₹{user?.walletBalance ?? 0}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 text-brand-dark/50">
+            <p className="font-sans text-xs font-semibold">History</p>
+            <ChevronRight size={16} />
+          </div>
+        </BrutalCard>
+      </motion.button>
 
       {/* Opt-out history */}
       <h3 className="font-serif font-bold text-lg mb-3">Opt-Out History</h3>
@@ -231,31 +198,6 @@ export default function Profile({ direction }) {
           );
         })}
       </div>
-
-      {/* My penalties (wallet kata to reason yahi dikhega) */}
-      {penalties.length > 0 && (
-        <>
-          <h3 className="font-serif font-bold text-lg mb-3">My Penalties</h3>
-          <div className="flex flex-col gap-2 mb-6">
-            {penalties.map((p) => (
-              <BrutalCard key={p.id} color={p.resolved ? 'bg-brand-accent/60' : 'bg-brand-secondary'} className="p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-sans font-bold text-sm">−₹{p.amount} · {p.reason}</p>
-                    <p className="font-sans text-[11px] text-brand-dark/60 mt-0.5">
-                      By {p.appliedBy || 'Committee'}
-                      {p.appliedAt?.toDate ? ` · ${new Date(p.appliedAt.toDate()).toLocaleDateString('en-IN')}` : ''}
-                    </p>
-                  </div>
-                  <BrutalBadge color={p.resolved ? 'bg-brand-accent' : 'bg-brand-secondary'}>
-                    {p.resolved ? 'Resolved' : 'Active'}
-                  </BrutalBadge>
-                </div>
-              </BrutalCard>
-            ))}
-          </div>
-        </>
-      )}
 
       {/* Logout */}
       <BrutalButton icon={LogOut} onClick={logout} variant="ghost" fullWidth>
